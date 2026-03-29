@@ -1,0 +1,18 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Django
+db.sqlite3
+*.sqlite3
+
+# Mac
+.DS_Store
+
+# Windows
+*.lnk
+
+# Archives
+LittleLemon_old/
+LittleLemon_old2/
