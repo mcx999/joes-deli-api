@@ -4,6 +4,7 @@ from JoesDeliDRF.views import CustomTokenCreateView
 
 from .views import (
     MenuItemViewSet,
+    CartViewSet,
     OrderViewSet,
     OrderItemViewSet,
     RatingViewSet,
@@ -12,6 +13,7 @@ from .views import (
 
 router = DefaultRouter()
 router.register(r'menu-items', MenuItemViewSet, basename='menu-items')
+router.register(r'cart-items', CartViewSet, basename='cart-items')
 router.register(r'orders', OrderViewSet, basename='orders')
 router.register(r'order-items', OrderItemViewSet, basename='orderitem')
 router.register(r'ratings', RatingViewSet, basename='rating')
