@@ -18,8 +18,10 @@ class MenuItem(models.Model):
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True)     
     price = models.DecimalField(max_digits=6, decimal_places=2)
-    inventory = models.IntegerField(default=0)  #
+    inventory = models.IntegerField(default=0)
     category = models.ForeignKey(Category, on_delete=models.CASCADE)
+    is_vegetarian = models.BooleanField(default=False)
+    is_vegan = models.BooleanField(default=False)
 
     
     def __str__(self):
@@ -39,9 +41,6 @@ class Cart(models.Model):
 
     def __str__(self):
         return f"{self.user.username} - {self.menuitem.title} x {self.quantity}"
-    
-    def __str__(self):
-        return f"Order #{self.id} by {self.user.username}"
 
 class Order(models.Model):
     user = models.ForeignKey(

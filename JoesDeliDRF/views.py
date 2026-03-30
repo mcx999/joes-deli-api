@@ -85,7 +85,7 @@ class MenuItemViewSet(viewsets.ModelViewSet):
     search_fields = ['title', 'description', 'category__title']
     ordering_fields = ['price', 'title']
     ordering = ['title']
-    filterset_fields = ['category', 'price']
+    filterset_fields = ['category', 'price', 'is_vegetarian', 'is_vegan']
 
     def get_permissions(self):
         if self.request.method in ['POST', 'PUT', 'PATCH', 'DELETE']:
