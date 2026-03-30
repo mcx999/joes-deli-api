@@ -17,15 +17,15 @@ class RatingSerializer(serializers.ModelSerializer):
         queryset=get_user_model().objects.all(),
         default=serializers.CurrentUserDefault()
     )
-
+    menuitem = serializers.PrimaryKeyRelatedField(queryset=MenuItem.objects.all())
 
     class Meta:
         model = Rating
-        fields = ['user', 'menuitem_id', 'rating']
+        fields = ['user', 'menuitem', 'rating']
         validators = [
             UniqueTogetherValidator(
                 queryset=Rating.objects.all(),
-                fields=['user', 'menuitem_id', 'rating']
+                fields=['user', 'menuitem']
             )
         ]
         extra_kwargs = {
@@ -93,29 +93,7 @@ class OrderSerializer(serializers.ModelSerializer):
         read_only_fields = ['user', 'total', 'date']
 
     def get_local_date(self, obj):
-        eastern = timezone('America/New_York')
-        return obj.date.astimezone(eastern).strftime('%Y-%m-%d %H:%M:%S')
-
-    def create(self, validated_data):
-        user = self.context['request'].user
-        cart_items = Cart.objects.filter(user=user)
-        if not cart_items.exists():
-            raise serializers.ValidationError("Cart is empty")
-
-        total = sum(item.price for item in cart_items)
-        order = Order.objects.create(user=user, total=total)
-
-        for item in cart_items:
-            OrderItem.objects.create(
-                order=order,
-                menuitem=item.menuitem,
-                quantity=item.quantity,
-                unit_price=item.unit_price,
-                price=item.price
-            )
-
-        cart_items.delete()
-        return order
+        return obj.date.strftime('%Y-%m-%d')
 
 class CustomTokenCreateSerializer(TokenObtainPairSerializer):
    def validate(self, attrs):

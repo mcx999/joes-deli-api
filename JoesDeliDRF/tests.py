@@ -1,8 +1,22 @@
 from decimal import Decimal
 from django.contrib.auth.models import User, Group
+from django.core.cache import cache
+from django.test import override_settings
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
+
+NO_THROTTLE = {
+    'DEFAULT_FILTER_BACKENDS': ['django_filters.rest_framework.DjangoFilterBackend'],
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
+    'DEFAULT_THROTTLE_CLASSES': [],
+    'DEFAULT_THROTTLE_RATES': {},
+}
 
 from .models import Category, MenuItem, Cart, Order, OrderItem, Rating
 
@@ -40,7 +54,23 @@ class BaseTestCase(APITestCase):
         crew_user     — in 'Delivery crew' group
         customer_user — plain authenticated user
     Anonymous access is tested via self.client (unauthenticated).
+    Throttling is disabled via override_settings applied in setUpClass so
+    all subclasses inherit the override automatically.
     """
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls._throttle_override = override_settings(REST_FRAMEWORK=NO_THROTTLE)
+        cls._throttle_override.enable()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls._throttle_override.disable()
+        super().tearDownClass()
+
+    def setUp(self):
+        cache.clear()
 
     @classmethod
     def setUpTestData(cls):
@@ -251,6 +281,7 @@ class CartTests(BaseTestCase):
         cls.item = make_menu_item(cls.category, 'Reuben', '13.99')
 
     def setUp(self):
+        super().setUp()
         Cart.objects.all().delete()
 
     def _list_url(self):
@@ -307,6 +338,7 @@ class OrderTests(BaseTestCase):
         cls.item = make_menu_item(cls.category, 'Turkey Club', '12.99')
 
     def setUp(self):
+        super().setUp()
         Cart.objects.all().delete()
         Order.objects.all().delete()
 
@@ -418,6 +450,7 @@ class RatingTests(BaseTestCase):
         cls.item = make_menu_item(cls.category, 'Classic Caesar', '9.99')
 
     def setUp(self):
+        super().setUp()
         Rating.objects.all().delete()
 
     def _ratings_url(self):
@@ -426,7 +459,7 @@ class RatingTests(BaseTestCase):
     def test_anonymous_cannot_rate(self):
         self.logout()
         response = self.client.post(self._ratings_url(), {
-            'menuitem_id': self.item.pk,
+            'menuitem': self.item.pk,
             'rating': 5,
         })
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
@@ -434,7 +467,7 @@ class RatingTests(BaseTestCase):
     def test_customer_can_rate_menu_item(self):
         self.force_login(self.customer_user)
         response = self.client.post(self._ratings_url(), {
-            'menuitem_id': self.item.pk,
+            'menuitem': self.item.pk,
             'rating': 4,
         })
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
@@ -442,11 +475,11 @@ class RatingTests(BaseTestCase):
     def test_customer_cannot_rate_same_item_twice(self):
         self.force_login(self.customer_user)
         self.client.post(self._ratings_url(), {
-            'menuitem_id': self.item.pk,
+            'menuitem': self.item.pk,
             'rating': 4,
         })
         response = self.client.post(self._ratings_url(), {
-            'menuitem_id': self.item.pk,
+            'menuitem': self.item.pk,
             'rating': 3,
         })
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -454,7 +487,7 @@ class RatingTests(BaseTestCase):
     def test_rating_out_of_range_rejected(self):
         self.force_login(self.customer_user)
         response = self.client.post(self._ratings_url(), {
-            'menuitem_id': self.item.pk,
+            'menuitem': self.item.pk,
             'rating': 6,
         })
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -462,7 +495,7 @@ class RatingTests(BaseTestCase):
     def test_customer_only_sees_own_ratings(self):
         self.force_login(self.customer_user)
         self.client.post(self._ratings_url(), {
-            'menuitem_id': self.item.pk,
+            'menuitem': self.item.pk,
             'rating': 5,
         })
         other = User.objects.create_user(username='rater2', password='testpass123')

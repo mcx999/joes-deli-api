@@ -167,10 +167,11 @@ class OrderViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         user = self.request.user
-        cart_items = Cart.objects.filter(user=user)
-        if not cart_items.exists():
+        cart_items = list(Cart.objects.filter(user=user))
+        if not cart_items:
             raise serializers.ValidationError("Cart is empty.")
-        order = serializer.save(user=user)
+        total = sum(item.price for item in cart_items)
+        order = serializer.save(user=user, total=total)
         for item in cart_items:
             OrderItem.objects.create(
                 order=order,
@@ -179,7 +180,7 @@ class OrderViewSet(viewsets.ModelViewSet):
                 unit_price=item.unit_price,
                 price=item.price
             )
-        cart_items.delete()
+        Cart.objects.filter(user=user).delete()
 
     def update(self, request, *args, **kwargs):
         user = request.user
@@ -209,9 +210,14 @@ class OrderItemViewSet(viewsets.ModelViewSet):
 
 # 🔹 Ratings
 class RatingViewSet(viewsets.ModelViewSet):
-    queryset = Rating.objects.all()
     serializer_class = RatingSerializer
     permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return Rating.objects.filter(user=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
 
 class TestTokenView(APIView):
     permission_classes = [AllowAny]  # ✅ allow unauthenticated access
