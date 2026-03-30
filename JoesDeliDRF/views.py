@@ -19,7 +19,7 @@ from .serializers import (
     OrderItemSerializer,
     RatingSerializer
 )
-from .permissions import IsManager, IsDeliveryCrew
+from .permissions import IsManager, IsManagerOrAdmin, IsDeliveryCrew
 from rest_framework.decorators import action
 
 
@@ -89,8 +89,8 @@ class MenuItemViewSet(viewsets.ModelViewSet):
 
     def get_permissions(self):
         if self.request.method in ['POST', 'PUT', 'PATCH', 'DELETE']:
-            return [IsAuthenticated(), IsManager()]
-        return []
+            return [IsAuthenticated(), IsManagerOrAdmin()]
+        return [AllowAny()]
 
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
