@@ -198,7 +198,7 @@ Authorization: Bearer <your_access_token>
 
 ---
 
-## 9. API Endpoints (Summary)
+## API Endpoints
 
 ### Menu
 
@@ -256,6 +256,59 @@ All 103 tests should pass.
 
 ---
 
+## 📬 Postman Collection
+
+This project includes a ready-to-use Postman collection for exploring and testing the API. Two files are provided:
+
+| File | Purpose |
+|------|---------|
+| `JoesDeliAPI.postman_collection.json` | All API requests, organized by resource |
+| `JoesDeliAPI.postman_environment.json` | Environment variables (`base_url`, `access_token`, `refresh_token`) |
+
+### Importing the Collection
+
+1. Open Postman and click **Import** (top-left)
+2. Select `JoesDeliAPI.postman_collection.json`
+
+You'll see folders for: Authentication, Menu, Cart, Orders, and Ratings. Each request is preconfigured with the correct URL, method, headers, and body.
+
+### Importing the Environment
+
+1. In Postman, open the **Environments** tab
+2. Click **Import** and select `JoesDeliAPI.postman_environment.json`
+3. In the top-right dropdown, select **Joe's Deli API Environment**
+
+The default `base_url` is `http://127.0.0.1:8000`. Update this if your server runs on a different address.
+
+### Authenticating
+
+Before accessing protected endpoints, obtain a JWT token:
+
+1. Open **Authentication → Login (Obtain JWT)**
+2. Update the username/password in the request body if needed
+3. Click **Send**
+
+On success, the `access_token` and `refresh_token` are saved automatically to your environment via a built-in Postman test script. All subsequent protected requests will include:
+
+```
+Authorization: Bearer {{access_token}}
+```
+
+### Refreshing Tokens
+
+If your access token expires, open **Authentication → Refresh Token** and click **Send**. The environment will update with a new `access_token`.
+
+### Troubleshooting
+
+| Status | Likely Cause |
+|--------|-------------|
+| `401 Unauthorized` | Login request not run, token expired, or no environment selected |
+| `403 Forbidden` | Logged in, but role lacks permission for this action |
+| `404 Not Found` | Server not running or incorrect `base_url` |
+| `500 Server Error` | Backend error, missing migrations, or uninitialized database |
+
+---
+
 ## 🧭 Roadmap
 
 ### Completed
@@ -268,6 +321,7 @@ All 103 tests should pass.
 - 103 test suite
 - Menu refinement
 - Migration updates
+- Postman collection
 
 ### Current (PI 3)
 
@@ -281,7 +335,6 @@ All 103 tests should pass.
 - Swagger/OpenAPI docs
 - Docker support
 - GitHub Actions CI
-- Postman collection
 - Frontend UI (React/Next.js)
 - Deployment (Render/Vercel)
 - Analytics dashboard
