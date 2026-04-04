@@ -1,18 +1,54 @@
 # Python
 __pycache__/
-*.pyc
+*.py[cod]
 *.pyo
+*.pyd
+*.pdb
+*.pkl
+*.so
+
+# Virtual environments
+.venv/
+venv/
+env/
 
 # Django
-db.sqlite3
+*.log
+*.pot
+*.pyc
 *.sqlite3
+db.sqlite3
+media/
+staticfiles/
 
-# Mac
+# VS Code / PyCharm
+.vscode/
+.idea/
+
+# OS files
 .DS_Store
+Thumbs.db
 
-# Windows
-*.lnk
+# Environment variables
+.env
+.env.*
 
-# Archives
-LittleLemon_old/
-LittleLemon_old2/
+# Migrations (optional — keep them if versioned)
+# */migrations/*.py
+# !*/migrations/__init__.py
+
+# Coverage
+htmlcov/
+.coverage
+.coverage.*
+
+# MyPy
+.mypy_cache/
+
+# Pytest
+.pytest_cache/
+
+# Build artifacts
+build/
+dist/
+*.egg-info/

@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python:*)",
+      "Bash(grep -E \"^\\(FAIL|ERROR|Ran |OK$\\)\")",
+      "Bash(grep -E \"^\\(FAIL|ERROR|Ran |OK$|test_admin_is\\)\")"
+    ]
+  }
+}

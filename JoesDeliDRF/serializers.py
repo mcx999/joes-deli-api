@@ -1,3 +1,4 @@
+from decimal import Decimal
 from rest_framework import serializers
 from rest_framework.validators import UniqueTogetherValidator
 from django.contrib.auth.models import User
@@ -49,6 +50,9 @@ class MenuItemSerializer(serializers.ModelSerializer):
         source='category',
         write_only=True
     )
+    price = serializers.DecimalField(
+        max_digits=6, decimal_places=2, min_value=Decimal('0.01')
+    )
 
     class Meta:
         model = MenuItem
@@ -56,6 +60,8 @@ class MenuItemSerializer(serializers.ModelSerializer):
 
 # Cart Serializer
 class CartSerializer(serializers.ModelSerializer):
+    quantity = serializers.IntegerField(min_value=1)
+
     class Meta:
         model = Cart
         fields = ['id', 'menuitem', 'quantity', 'unit_price', 'price']

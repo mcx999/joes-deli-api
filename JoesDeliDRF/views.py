@@ -1,4 +1,4 @@
-from datetime import datetime, time
+from datetime import datetime, time, timezone as dt_timezone
 from django.utils import timezone
 from django.http import JsonResponse
 from django.contrib.auth.models import User, Group
@@ -19,20 +19,21 @@ from .serializers import (
     OrderItemSerializer,
     RatingSerializer
 )
-from .permissions import IsManager, IsManagerOrAdmin, IsDeliveryCrew
+from .permissions import IsManager, IsManagerOrAdmin, IsDeliveryCrew, IsDeliveryCrewOrManager
 from rest_framework.decorators import action
 
 
-# 🔧 Utility for timezone-aware filtering
+# Utility for timezone-aware filtering
 def get_today_utc_range():
     local_today = timezone.localtime().date()
     start_local = datetime.combine(local_today, time.min)
     end_local = datetime.combine(local_today, time.max)
-    start_utc = timezone.make_aware(start_local).astimezone(timezone.utc)
-    end_utc = timezone.make_aware(end_local).astimezone(timezone.utc)
+    start_utc = timezone.make_aware(start_local).astimezone(dt_timezone.utc)
+    end_utc = timezone.make_aware(end_local).astimezone(dt_timezone.utc)
     return start_utc, end_utc
 
-# 🔹 Root view
+
+# Root view
 def root_view(request):
     return JsonResponse({
         "message": "Welcome to the Joe's Deli API",
@@ -45,9 +46,11 @@ def root_view(request):
         ]
     })
 
-# 🔹 Group Management
+
+# Group Management
 class GroupManagementViewSet(viewsets.ViewSet):
-    permission_classes = [IsAuthenticated, IsManager]
+    # IsManagerOrAdmin: staff admins and Manager-group members can manage groups
+    permission_classes = [IsAuthenticated, IsManagerOrAdmin]
 
     def list(self, request, group_name=None):
         try:
@@ -77,7 +80,8 @@ class GroupManagementViewSet(viewsets.ViewSet):
         except (User.DoesNotExist, Group.DoesNotExist):
             return Response({'error': 'User or group not found'}, status=status.HTTP_404_NOT_FOUND)
 
-# 🔹 Menu Items
+
+# Menu Items
 class MenuItemViewSet(viewsets.ModelViewSet):
     queryset = MenuItem.objects.all()
     serializer_class = MenuItemSerializer
@@ -103,7 +107,8 @@ class MenuItemViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
 
-# 🔹 Cart
+
+# Cart
 class CartViewSet(viewsets.ModelViewSet):
     serializer_class = CartSerializer
     permission_classes = [IsAuthenticated]
@@ -135,19 +140,28 @@ class CartViewSet(viewsets.ModelViewSet):
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     def destroy(self, request, *args, **kwargs):
-        Cart.objects.filter(user=request.user).delete()
+        # DELETE /cart-items/<pk>/ removes only that specific item
+        instance = self.get_object()
+        instance.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
-    
+
     @action(detail=False, methods=['delete'], url_path='clear')
     def clear_cart(self, request):
+        # DELETE /cart-items/clear/ wipes the entire cart
         Cart.objects.filter(user=request.user).delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-# 🔹 Orders
+# Orders
 class OrderViewSet(viewsets.ModelViewSet):
     serializer_class = OrderSerializer
-    permission_classes = [IsAuthenticated]
+
+    def get_permissions(self):
+        if self.action == 'destroy':
+            return [IsAuthenticated(), IsManager()]
+        if self.action in ['update', 'partial_update']:
+            return [IsAuthenticated(), IsDeliveryCrewOrManager()]
+        return [IsAuthenticated()]
 
     def get_queryset(self):
         user = self.request.user
@@ -161,7 +175,7 @@ class OrderViewSet(viewsets.ModelViewSet):
 
         if user.groups.filter(name='Manager').exists():
             return base_qs
-        elif user.groups.filter(name='Delivery crew').exists():
+        elif user.groups.filter(name='DeliveryCrew').exists():
             return base_qs.filter(delivery_crew=user)
         return base_qs.filter(user=user)
 
@@ -185,9 +199,9 @@ class OrderViewSet(viewsets.ModelViewSet):
     def update(self, request, *args, **kwargs):
         user = request.user
         order = self.get_object()
-        if user.groups.filter(name='Manager').exists():
+        if user.groups.filter(name='Manager').exists() or user.is_staff:
             return super().update(request, *args, **kwargs)
-        elif user.groups.filter(name='Delivery crew').exists():
+        elif user.groups.filter(name='DeliveryCrew').exists():
             status_value = request.data.get('status')
             if status_value in ['0', '1']:
                 order.status = int(status_value)
@@ -202,13 +216,27 @@ class OrderViewSet(viewsets.ModelViewSet):
             return super().destroy(request, *args, **kwargs)
         return Response({'error': 'Unauthorized'}, status=status.HTTP_403_FORBIDDEN)
 
-# 🔹 Order Items
-class OrderItemViewSet(viewsets.ModelViewSet):
-    queryset = OrderItem.objects.all()
-    serializer_class = OrderItemSerializer
-    permission_classes = [IsAuthenticated]
 
-# 🔹 Ratings
+# Order Items
+class OrderItemViewSet(viewsets.ModelViewSet):
+    serializer_class = OrderItemSerializer
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.is_staff or user.groups.filter(name='Manager').exists():
+            return OrderItem.objects.all()
+        if user.groups.filter(name='DeliveryCrew').exists():
+            return OrderItem.objects.filter(order__delivery_crew=user)
+        # Customers see only their own order items
+        return OrderItem.objects.filter(order__user=user)
+
+    def get_permissions(self):
+        if self.request.method in ['POST', 'PUT', 'PATCH', 'DELETE']:
+            return [IsAuthenticated(), IsManagerOrAdmin()]
+        return [IsAuthenticated()]
+
+
+# Ratings
 class RatingViewSet(viewsets.ModelViewSet):
     serializer_class = RatingSerializer
     permission_classes = [IsAuthenticated]
@@ -219,17 +247,19 @@ class RatingViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
 
+
 class TestTokenView(APIView):
-    permission_classes = [AllowAny]  # ✅ allow unauthenticated access
+    permission_classes = [AllowAny]
 
     def post(self, request):
         from .token_serializers import CustomTokenCreateSerializer
         serializer = CustomTokenCreateSerializer(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
         return Response(serializer.validated_data)
+
     def get(self, request):
         return Response({"message": "GET method works"})
 
+
 class CustomTokenCreateView(TokenObtainPairView):
     serializer_class = CustomTokenCreateSerializer
-
