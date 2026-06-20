@@ -322,13 +322,16 @@ If your access token expires, open **Authentication → Refresh Token** and clic
 - Menu refinement
 - Migration updates
 - Postman collection
+- README (full draft complete)
+- Documentation (API docs, setup instructions, role matrix)
+- LICENSE (MIT)
+- Repo polish (structure cleanup, naming consistency, .gitignore finalization)
 
 ### Current (PI 3)
 
-- README
-- Documentation
-- Repo polish
-- LICENSE
+- Final README refinement (minor polishing, badges, screenshots)
+- Final documentation formatting (optional: Swagger/OpenAPI)
+- Optional developer‑experience enhancements: Dockerfile + docker‑compose; GitHub Actions CI; Optional: Postman → README integration; Optional: API schema export
 
 ### Future Enhancements
 
