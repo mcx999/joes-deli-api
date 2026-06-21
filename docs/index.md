@@ -1,3 +1,6 @@
+<p align="center">
+  <img src="https://dummyimage.com/200x200/000/fff&text=Joe's+Deli" width="160" alt="Joe’s Deli Logo">
+</p>
 # Joe’s Deli API Documentation
 
 Welcome to the official documentation for the **Joe’s Deli API**, the backend service that powers ordering, menu management, and customer interactions for Joe’s Deli.
